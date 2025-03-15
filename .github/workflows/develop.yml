@@ -1,0 +1,212 @@
+name: Docker Build and Push
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - develop
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: testeluismatos/ec-customer-service
+
+jobs:
+  build:
+    name: Build Docker Image
+    if: github.event.pull_request.merged == true && contains(github.head_ref, 'feature/')
+    runs-on: ubuntu-latest
+    outputs:
+      build_id: ${{ steps.tag.outputs.build_id }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate build ID
+        id: tag
+        run: |
+          BUILD_ID=$(date +%Y%m%d).$(date +%H%M%S)
+          echo "build_id=${BUILD_ID}" >> $GITHUB_OUTPUT
+          echo "BUILD_ID=${BUILD_ID}" >> $GITHUB_ENV
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Build
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BUILD_ID }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify Docker image exists
+        run: |
+          docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BUILD_ID }}
+
+      - name: Save Docker image locally
+        run: |
+          docker save ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BUILD_ID }} -o image.tar
+
+      - name: Cache Docker image
+        uses: actions/cache@v3
+        with:
+          path: image.tar
+          key: ${{ env.IMAGE_NAME }}-${{ env.BUILD_ID }}
+
+  security-scan:
+    name: Security Scan
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Restore Docker image from cache
+        uses: actions/cache@v3
+        with:
+          path: image.tar
+          key: ${{ env.IMAGE_NAME }}-${{ needs.build.outputs.build_id }}
+
+      - name: Load Docker image
+        run: docker load -i image.tar
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.build_id }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  push:
+    name: Push to Registry
+    needs: [build, security-scan]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Restore Docker image from cache
+        uses: actions/cache@v3
+        with:
+          path: image.tar
+          key: ${{ env.IMAGE_NAME }}-${{ needs.build.outputs.build_id }}
+
+      - name: Load Docker image
+        run: docker load -i image.tar
+
+      - name: Push Docker image
+        run: |
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.build_id }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.build_id }}
+
+
+  create-release-tag:
+    name: Create Release Tag and PR
+    needs: [push]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+  
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+  
+      - name: Fetch all branches
+        run: git fetch --all
+  
+      - name: Get latest tag
+        id: get-latest-tag
+        run: |
+          git fetch --tags
+          LATEST_TAG=$(git tag -l 'v*' | sort -V | tail -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "version=v1.0.0" >> $GITHUB_OUTPUT
+          else
+            CURRENT_VERSION=$(echo $LATEST_TAG | sed 's/v//')
+            MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
+            MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
+            PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
+            NEW_PATCH=$((PATCH + 1))
+            echo "version=v$MAJOR.$MINOR.$NEW_PATCH" >> $GITHUB_OUTPUT
+          fi
+  
+      - name: Create and push tag
+        run: |
+          echo "Criando tag ${{ steps.get-latest-tag.outputs.version }}"
+          git tag ${{ steps.get-latest-tag.outputs.version }}
+          git push origin ${{ steps.get-latest-tag.outputs.version }}
+  
+      - name: Create release branch
+        run: |
+          git checkout master
+          git checkout -b release/${{ steps.get-latest-tag.outputs.version }}
+          git push origin release/${{ steps.get-latest-tag.outputs.version }}
+  
+      - name: Create deployment branch
+        run: |
+          git checkout -b deployment/${{ steps.get-latest-tag.outputs.version }}
+          echo "IMAGE_TAG=${{ needs.build.outputs.build_id }}" > .env.deployment
+          git add .env.deployment
+          git config --local user.email "luismatos000@gmail.com"
+          git config --local user.name "Luis Matos"
+          git commit -m "chore: adiciona configuração de deployment para ${{ steps.get-latest-tag.outputs.version }}"
+          git push origin deployment/${{ steps.get-latest-tag.outputs.version }}
+  
+      - name: Verify deployment branch
+        id: verify-branch
+        run: |
+          git fetch origin
+          git checkout master
+          git checkout deployment/${{ steps.get-latest-tag.outputs.version }}
+          COMMITS=$(git log master..deployment/${{ steps.get-latest-tag.outputs.version }} --oneline)
+          if [ -z "$COMMITS" ]; then
+            echo "No commits between master and deployment/${{ steps.get-latest-tag.outputs.version }}"
+            exit 1
+          fi
+  
+      - name: Create labels
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          gh label create release --description "Release label" --color "#f29513" || true
+          gh label create deployment --description "Deployment label" --color "#0e8a16" || true
+  
+      - name: Create Pull Request from develop to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          gh pr create \
+            --title "Merge develop into release/${{ steps.get-latest-tag.outputs.version }}" \
+            --body "## Merge develop into release branch
+  
+            ### Changelog
+            Esta PR inclui todas as alterações da branch develop até o commit atual." \
+            --base release/${{ steps.get-latest-tag.outputs.version }} \
+            --head develop \
+            --label "release"

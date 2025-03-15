@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: product-service-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://root:MongoDB2025!@mongo:27017/customer-service?authSource=admin
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - mongo
+    networks:
+      - mongo-compose-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mongo:
+    image: mongo:latest
+    container_name: mongodb-customer
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: MongoDB2025!
+      MONGO_INITDB_DATABASE: customer-service
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-volume:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - mongo-compose-network
+    deploy:
+      resources: 
+        limits:
+          cpus: '0.50'
+          memory: 256M
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express-customer
+    depends_on:
+      - mongo
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_BASICAUTH_USERNAME: custormer-auth
+      ME_CONFIG_BASICAUTH_PASSWORD: MongoExpress2025!
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: MongoDB2025!
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
+      ME_CONFIG_OPTIONS_EDITORTHEME: "dracula"
+    networks:
+      - mongo-compose-network
+    deploy:
+      resources: 
+        limits:
+          cpus: '0.50'
+          memory: 256M
+    healthcheck:
+      test: wget --quiet --tries=1 --spider http://localhost:8081 || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mongo-volume:
+    name: mongodb-product-data
+    driver: local
+
+networks:
+  mongo-compose-network:
+    name: product-service-network
+    driver: bridge
