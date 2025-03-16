@@ -31,9 +31,11 @@ public class UpdateProductController {
   @PutMapping("/{id}")
   public ResponseEntity<Product> updateProduct(@PathVariable String id,
       @Valid @RequestBody UpdateProductRequest request) {
-    
+    log.info("Atualizando produto com id: {}", id);
     Product product = ProductMapper.toDomain(request);
+    log.info("Produto recebido: {}", product);
     Product updatedProduct = updateProductUseCase.execute(id, product);
+    log.info("Produto atualizado com sucesso");
     return ResponseEntity.ok(updatedProduct);
   }
 
