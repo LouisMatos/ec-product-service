@@ -1,4 +1,3 @@
-
 name: Simulate Production Deploy and Create Release PR
 
 on:
@@ -14,19 +13,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Build and Test
-        run: mvn clean install
-
       - name: Simulate Deploy
         run: echo "Simulating deploy to production environment"
 
@@ -44,12 +30,19 @@ jobs:
           git config --global user.name 'Luis Matos'
           git config --global user.email 'luismatos000@gmail.com'
 
+      - name: Get latest release branch
+        id: get-latest-release-branch
+        run: |
+          LATEST_RELEASE_BRANCH=$(git branch -r | grep 'release/' | sort -V | tail -n 1 | sed 's/origin\///')
+          echo "latest_release_branch=${LATEST_RELEASE_BRANCH}" >> $GITHUB_ENV
+          echo "Latest release branch: ${LATEST_RELEASE_BRANCH}"
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v4
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          base: master
-          branch: ${{ github.head_ref }}
+          base: develop
+          branch: ${{ env.latest_release_branch }}
           title: 'Release PR from Release Branch'
           body: 'This pull request was automatically created by GitHub Actions.'
           labels: 'release'
