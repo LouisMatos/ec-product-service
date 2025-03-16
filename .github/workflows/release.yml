@@ -3,12 +3,14 @@ name: Simulate Production Deploy and Create Release PR
 
 on:
   pull_request:
+    types: [closed]
     branches:
       - release/**
 
 jobs:
   simulate-deploy:
     name: Simulate Production Deploy
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
@@ -30,6 +32,7 @@ jobs:
 
   create-release-pr:
     name: Create Release PR
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     needs: simulate-deploy
 
@@ -52,3 +55,14 @@ jobs:
           body: 'This pull request was automatically created by GitHub Actions.'
           labels: 'release'
           assignees: 'matosit'
+
+  manual-approval:
+    name: Manual Approval
+    runs-on: ubuntu-latest
+    needs: create-release-pr
+    steps:
+      - name: Await manual approval
+        uses: hmarr/auto-approve-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ needs.create-release-pr.outputs.pull-request-number }}
