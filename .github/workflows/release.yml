@@ -30,9 +30,9 @@ jobs:
       - name: Simulate Deploy
         run: echo "Simulating deploy to production environment"
 
-  create-release-pr:
+
+  create-pull-request:
     name: Create Release PR
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     needs: simulate-deploy
 
@@ -45,24 +45,21 @@ jobs:
           git config --global user.name 'Luis Matos'
           git config --global user.email 'luismatos000@gmail.com'
 
+      - name: Get latest release branch
+        id: get-latest-release-branch
+        run: |
+          LATEST_RELEASE_BRANCH=$(git branch -r | grep 'release/' | sort -V | tail -n 1 | sed 's/origin\///')
+          echo "latest_release_branch=${LATEST_RELEASE_BRANCH}" >> $GITHUB_ENV
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v4
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           base: master
-          branch: ${{ github.head_ref }}
+          branch: ${{ env.latest_release_branch }}
           title: 'Release PR from Release Branch'
           body: 'This pull request was automatically created by GitHub Actions.'
           labels: 'release'
           assignees: 'matosit'
 
-  manual-approval:
-    name: Manual Approval
-    runs-on: ubuntu-latest
-    needs: create-release-pr
-    steps:
-      - name: Await manual approval
-        uses: hmarr/auto-approve-action@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: ${{ needs.create-release-pr.outputs.pull-request-number }}
+
