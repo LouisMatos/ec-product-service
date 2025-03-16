@@ -41,7 +41,7 @@ jobs:
         uses: peter-evans/create-pull-request@v4
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          base: master
+          base: develop
           branch: ${{ env.latest_release_branch }}
           title: 'Release PR from Release Branch'
           body: 'This pull request was automatically created by GitHub Actions.'
