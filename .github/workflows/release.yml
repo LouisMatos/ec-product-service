@@ -54,4 +54,3 @@ jobs:
           body: 'This pull request was automatically created by GitHub Actions.'
           labels: 'release'
           assignees: 'matosit'
-
