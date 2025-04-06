@@ -63,6 +63,31 @@ public class Product {
     return image3D;
   }
 
+  // Setters
+  public void setId(String id) {
+    this.id = id;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
+  }
+
+  public void setPrice(Double price) {
+    this.price = price;
+  }
+
+  public void setStockQuantity(Integer stockQuantity) {
+    this.stockQuantity = stockQuantity;
+  }
+
+  public void setImage3D(String image3D) {
+    this.image3D = image3D;
+  }
+  
   // Métodos de domínio
   public void updatePrice(Double newPrice) {
     if (newPrice == null || newPrice < 0) {
