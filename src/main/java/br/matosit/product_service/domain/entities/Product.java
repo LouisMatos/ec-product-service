@@ -28,6 +28,16 @@ public class Product {
     this.image3D = image3D;
   }
 
+  public Product(String id, String name, String description, Double price, Integer stockQuantity,
+      String image3D) {
+    this.id = id;
+    this.name = name;
+    this.description = description;
+    this.price = price;
+    this.stockQuantity = stockQuantity;
+    this.image3D = image3D;
+  }
+
   // Getters
   public String getId() {
     return id;
@@ -77,8 +87,7 @@ public class Product {
   public void setImage3D(String image3D) {
     this.image3D = image3D;
   }
-
-
+  
   // Métodos de domínio
   public void updatePrice(Double newPrice) {
     if (newPrice == null || newPrice < 0) {
