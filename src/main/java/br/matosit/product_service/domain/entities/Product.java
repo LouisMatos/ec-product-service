@@ -37,6 +37,10 @@ public class Product {
     this.stockQuantity = stockQuantity;
     this.image3D = image3D;
   }
+  
+  public Product() {
+    // Construtor padrão para o MongoDB
+  }
 
   // Getters
   public String getId() {
