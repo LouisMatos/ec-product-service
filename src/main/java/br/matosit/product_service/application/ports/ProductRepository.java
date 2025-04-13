@@ -12,6 +12,8 @@ public interface ProductRepository {
 
   void deleteById(String id);
 
-Product findByName(String name);
+  Product findByName(String name);
+
+  boolean existsById(String id);
 
 }
