@@ -7,6 +7,7 @@ import br.matosit.product_service.application.ports.ProductRepository;
 import br.matosit.product_service.domain.entities.Product;
 
 @Repository
-public interface MongoCustomerRepository extends MongoRepository<Product, String>, ProductRepository {
-    
-} 
+public interface MongoCustomerRepository
+    extends MongoRepository<Product, String>, ProductRepository {
+
+}
