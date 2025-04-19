@@ -16,23 +16,25 @@ spring:
       uuid-representation: standard
 
   kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: your-service-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.trusted.packages: "br.matosit.product_service.application.dto"
 
 server:
   port: 8051
 
 logging:
   level:
+    org.apache.kafka: ERROR
+    org.springframework.kafka: ERROR
+    br.matosit.product_service: INFO
+    org.apache.kafka.clients.producer.ProducerConfig: ERROR
+    org.apache.kafka.clients.consumer.ConsumerConfig: ERROR
+    org.apache.kafka.common.metrics: ERROR
+    org.apache.kafka.clients.Metadata: ERROR
     org.springframework.data.mongodb: INFO
     br.matosit.customer_service: INFO
   pattern: 
@@ -55,4 +57,15 @@ management:
   endpoint:
     health:
       show-details: always 
-      
+
+app:
+  kafka:
+    topic:
+      product:
+        name: product-created
+            
+  async:
+    core-pool-size: 2
+    max-pool-size: 4
+    queue-capacity: 50
+    thread-name-prefix: "AsyncEvent-"

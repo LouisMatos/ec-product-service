@@ -28,13 +28,12 @@ public class CreateProductController {
   }
 
   @PostMapping
-  public ResponseEntity<Product>productCustomer(
-      @Valid @RequestBody CreateProductRequest request) {
-    
+  public ResponseEntity<Product> productCustomer(@Valid @RequestBody CreateProductRequest request) {
+
     Product product = ProductMapper.toDomain(request);
-    Product createdCustomer = createProductUseCase.execute(product);
-    log.info("Cliente criado com sucesso: {}", createdCustomer.getId());
-    return ResponseEntity.ok(createdCustomer);
+    Product createdProduct = createProductUseCase.execute(product);
+    log.info("Produto criado com sucesso: {}", createdProduct.getId());
+    return ResponseEntity.ok(createdProduct);
   }
 
 }
