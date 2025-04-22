@@ -5,16 +5,27 @@ public class ProductDTO {
   private String name;
   private String description;
   private double price;
+  private Integer stockQuantity;
 
   // Construtor
-  public ProductDTO(String id, String name, String description, double price) {
+  public ProductDTO(String id, String name, String description, double price,
+      Integer stockQuantity) {
     this.id = id;
     this.name = name;
     this.description = description;
     this.price = price;
+    this.stockQuantity = stockQuantity;
   }
 
   // Getters e Setters
+  public Integer getStockQuantity() {
+    return stockQuantity;
+  }
+
+  public void setStockQuantity(Integer stockQuantity) {
+    this.stockQuantity = stockQuantity;
+  }
+
   public String getId() {
     return id;
   }

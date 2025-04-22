@@ -24,12 +24,12 @@ public class FindProductUseCase {
     // Validação e busca do produto
     return productRepository.findById(id).map(this::toDTO).orElseThrow(() -> {
       log.warn("Produto com id {} não encontrado", id);
-      return new ProductNotFoundException(id);
+      throw new ProductNotFoundException(id);
     });
   }
 
   private ProductDTO toDTO(Product product) {
     return new ProductDTO(product.getId(), product.getName(), product.getDescription(),
-        product.getPrice());
+        product.getPrice(), product.getStockQuantity());
   }
 }
