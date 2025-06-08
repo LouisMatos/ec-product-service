@@ -12,46 +12,46 @@ import jakarta.servlet.http.HttpServletResponse;
 
 class MdcInterceptorTest {
 
-	private MdcInterceptor mdcInterceptor;
-	private HttpServletRequest mockRequest;
-	private HttpServletResponse mockResponse;
-	private Object mockHandler;
+  private MdcInterceptor mdcInterceptor;
+  private HttpServletRequest mockRequest;
+  private HttpServletResponse mockResponse;
+  private Object mockHandler;
 
-	@BeforeEach
-	void setUp() {
-		mdcInterceptor = new MdcInterceptor();
-		mockRequest = mock(HttpServletRequest.class);
-		mockResponse = mock(HttpServletResponse.class);
-		mockHandler = new Object();
-	}
+  @BeforeEach
+  void setUp() {
+    mdcInterceptor = new MdcInterceptor();
+    mockRequest = mock(HttpServletRequest.class);
+    mockResponse = mock(HttpServletResponse.class);
+    mockHandler = new Object();
+  }
 
-	@Nested
-	@DisplayName("preHandle method")
-	class PreHandleMethod {
+  @Nested
+  @DisplayName("preHandle method")
+  class PreHandleMethod {
 
-		@Test
-		@DisplayName("adds X-ReqId to MDC and returns true")
-		void addsXReqIdToMDCAndReturnsTrue() throws Exception {
-			boolean result = mdcInterceptor.preHandle(mockRequest, mockResponse, mockHandler);
+    @Test
+    @DisplayName("adds X-ReqId to MDC and returns true")
+    void addsXReqIdToMDCAndReturnsTrue() throws Exception {
+      boolean result = mdcInterceptor.preHandle(mockRequest, mockResponse, mockHandler);
 
-			assertTrue(result);
-			assertNotNull(MDC.get("X-ReqId"));
-			assertEquals(32, MDC.get("X-ReqId").length());
-		}
-	}
+      assertTrue(result);
+      assertNotNull(MDC.get("X-ReqId"));
+      assertEquals(32, MDC.get("X-ReqId").length());
+    }
+  }
 
-	@Nested
-	@DisplayName("afterCompletion method")
-	class AfterCompletionMethod {
+  @Nested
+  @DisplayName("afterCompletion method")
+  class AfterCompletionMethod {
 
-		@Test
-		@DisplayName("removes X-ReqId from MDC")
-		void removesXReqIdFromMDC() throws Exception {
-			MDC.put("X-ReqId", "dummy-id");
+    @Test
+    @DisplayName("removes X-ReqId from MDC")
+    void removesXReqIdFromMDC() throws Exception {
+      MDC.put("X-ReqId", "dummy-id");
 
-			mdcInterceptor.afterCompletion(mockRequest, mockResponse, mockHandler, null);
+      mdcInterceptor.afterCompletion(mockRequest, mockResponse, mockHandler, null);
 
-			assertNull(MDC.get("X-ReqId"));
-		}
-	}
+      assertNull(MDC.get("X-ReqId"));
+    }
+  }
 }
